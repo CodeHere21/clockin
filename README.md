@@ -22,7 +22,7 @@ in it later.
 - [x] Region decided: **East US 2**
 - [x] Frontend built, tested, building clean
 - [ ] $5 budget alert on the subscription
-- [ ] GitHub public repo `clockin`
+- [x] GitHub public repo [`clockin`](https://github.com/CodeHere21/clockin)
 - [ ] Deploy to Azure Static Web Apps
 - [ ] Azure CLI + `az bicep install`
 - [ ] Temurin JDK 25 (not needed until the backend)
