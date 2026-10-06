@@ -10,12 +10,46 @@ on:
       - main
 
 jobs:
+  # A gate, not a formality: if this job fails, the deploy below never starts.
+  # Prove it works by deliberately breaking a test and watching the deploy be skipped.
+  test:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Test
+    defaults:
+      run:
+        working-directory: ./web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # `npm ci` not `npm install`: installs exactly the lockfile, and fails if
+      # package.json and package-lock.json disagree.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # `npm run build` is `tsc -b && vite build`, so this is the typecheck too.
+      - name: Typecheck and build
+        run: npm run build
+
   build_and_deploy_job:
+    needs: test
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
           lfs: false
@@ -33,6 +67,8 @@ jobs:
           output_location: "dist" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
 
+  # Tears down the per-PR preview environment. Deliberately has no `needs: test`:
+  # cleanup must still happen even when the tests were failing.
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
