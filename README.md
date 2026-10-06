@@ -3,6 +3,10 @@
 A work-from-home clock in/out tracker. The app is deliberately small; the Azure work
 around it is the point.
 
+**Live:** https://ambitious-bush-06ed08410.4.azurestaticapps.net/
+Every push to `main` deploys. Lint, 30 tests and a typecheck gate the deploy — a red
+gate skips it entirely.
+
 ## Two tracks, in parallel
 
 | | Goal | Work from | When |
@@ -23,7 +27,7 @@ in it later.
 - [x] Frontend built, tested, building clean
 - [ ] $5 budget alert on the subscription
 - [x] GitHub public repo [`clockin`](https://github.com/CodeHere21/clockin)
-- [ ] Deploy to Azure Static Web Apps
+- [x] Deployed to Azure Static Web Apps — **[live site](https://ambitious-bush-06ed08410.4.azurestaticapps.net/)**
 - [ ] Azure CLI + `az bicep install`
 - [ ] Temurin JDK 25 (not needed until the backend)
 
