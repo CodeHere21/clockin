@@ -122,3 +122,70 @@ export function toLocalInput(iso: string): string {
 export function fromLocalInput(value: string): string {
   return new Date(value).toISOString()
 }
+
+/**
+ * Validation exists because breaks became editable. Until then the UI could only
+ * produce sane breaks — one at a time, always inside the session. Hand-edited
+ * times can produce a break that outlives its session, or two that overlap, and
+ * `breakMinutes` sums them all, so an overlap would be subtracted twice.
+ */
+export interface SessionProblem {
+  field: string
+  message: string
+}
+
+export function validateSession(session: Session, now: Date): SessionProblem[] {
+  const problems: SessionProblem[] = []
+  const start = new Date(session.startedAt).getTime()
+  const end = session.endedAt === null ? null : new Date(session.endedAt).getTime()
+
+  if (Number.isNaN(start)) {
+    problems.push({ field: 'startedAt', message: 'Start time is not a valid date.' })
+    return problems
+  }
+  if (end !== null && Number.isNaN(end)) {
+    problems.push({ field: 'endedAt', message: 'End time is not a valid date.' })
+    return problems
+  }
+  if (end !== null && end <= start) {
+    problems.push({ field: 'endedAt', message: 'End has to be after the start.' })
+  }
+
+  // An open session is bounded by now, so a break cannot be in the future either.
+  const bound = end ?? now.getTime()
+
+  const spans = session.breaks.map((b) => ({
+    id: b.id,
+    from: new Date(b.startedAt).getTime(),
+    to: b.endedAt === null ? bound : new Date(b.endedAt).getTime(),
+    open: b.endedAt === null,
+  }))
+
+  for (const s of spans) {
+    if (Number.isNaN(s.from) || Number.isNaN(s.to)) {
+      problems.push({ field: `break:${s.id}`, message: 'Break time is not a valid date.' })
+      continue
+    }
+    if (!s.open && s.to <= s.from) {
+      problems.push({ field: `break:${s.id}`, message: 'Break has to end after it starts.' })
+      continue
+    }
+    if (s.from < start || s.to > bound) {
+      problems.push({ field: `break:${s.id}`, message: 'Break falls outside the session.' })
+    }
+  }
+
+  const ordered = spans
+    .filter((s) => !Number.isNaN(s.from) && !Number.isNaN(s.to))
+    .sort((a, b) => a.from - b.from)
+  for (let i = 1; i < ordered.length; i++) {
+    if (ordered[i].from < ordered[i - 1].to) {
+      problems.push({
+        field: `break:${ordered[i].id}`,
+        message: 'Breaks overlap, so the time would be subtracted twice.',
+      })
+    }
+  }
+
+  return problems
+}

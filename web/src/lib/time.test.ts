@@ -7,6 +7,7 @@ import {
   startOfWeek,
   statusFor,
   sumWorked,
+  validateSession,
   weekDayKeys,
   workedMinutes,
 } from './time'
@@ -130,5 +131,52 @@ describe('formatHm', () => {
     [-30, '-30m'],
   ])('%i -> %s', (mins, expected) => {
     expect(formatHm(mins)).toBe(expected)
+  })
+})
+
+describe('validateSession', () => {
+  const start = '2026-10-05T09:00:00Z'
+  const end = '2026-10-05T17:00:00Z'
+  const now = new Date('2026-10-05T18:00:00Z')
+
+  it('accepts a sane session', () => {
+    const s = session(start, end, [['2026-10-05T12:00:00Z', '2026-10-05T12:30:00Z']])
+    expect(validateSession(s, now)).toEqual([])
+  })
+
+  it('rejects an end before the start', () => {
+    const s = session(end, start)
+    expect(validateSession(s, now)[0].message).toMatch(/after the start/)
+  })
+
+  it('rejects a break that ends before it starts', () => {
+    const s = session(start, end, [['2026-10-05T12:30:00Z', '2026-10-05T12:00:00Z']])
+    expect(validateSession(s, now)[0].message).toMatch(/end after it starts/)
+  })
+
+  it('rejects a break outside the session', () => {
+    const s = session(start, end, [['2026-10-05T18:00:00Z', '2026-10-05T18:30:00Z']])
+    expect(validateSession(s, now)[0].message).toMatch(/outside the session/)
+  })
+
+  it('rejects overlapping breaks, which would be subtracted twice', () => {
+    const s = session(start, end, [
+      ['2026-10-05T12:00:00Z', '2026-10-05T13:00:00Z'],
+      ['2026-10-05T12:30:00Z', '2026-10-05T13:30:00Z'],
+    ])
+    expect(validateSession(s, now).some((p) => /overlap/.test(p.message))).toBe(true)
+  })
+
+  it('allows breaks that merely touch end to start', () => {
+    const s = session(start, end, [
+      ['2026-10-05T12:00:00Z', '2026-10-05T12:30:00Z'],
+      ['2026-10-05T12:30:00Z', '2026-10-05T13:00:00Z'],
+    ])
+    expect(validateSession(s, now)).toEqual([])
+  })
+
+  it('bounds an open session by now, so a future break is rejected', () => {
+    const s = session(start, null, [['2026-10-05T19:00:00Z', '2026-10-05T19:30:00Z']])
+    expect(validateSession(s, now)[0].message).toMatch(/outside the session/)
   })
 })

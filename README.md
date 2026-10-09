@@ -40,35 +40,53 @@ React 19 + TypeScript + Tailwind 4 on Vite 8, in [`web/`](web). State lives in
 cd web
 npm install
 npm run dev      # http://localhost:5173
-npm test         # 30 tests
+npm test         # 37 tests
 npm run build    # typecheck + production build
+npm run preview  # serve the build; needed to exercise the service worker
+npm run icons    # re-rasterise public/icon.svg after changing the mark
 ```
 
 What it does: clock in/out, pause and resume for breaks, today and this-week totals
 against targets, encouraging status lines, history grouped by day, and correcting any
-past entry. Plus JSON export/import, because of the storage caveat below.
+past entry — including adding, removing and retiming its breaks. Plus JSON
+export/import, because of the storage caveat below.
+
+It is an installable PWA: add it to your home screen and it runs full-screen and fully
+offline, which costs nothing because there is no server to be offline from.
 
 ### How it is laid out
 
 | | |
 |---|---|
 | `web/src/lib/time.ts` | **The part that matters.** All hours math, pure, no clock reads — `now` is always a parameter. This is what becomes Java later. |
-| `web/src/lib/time.test.ts` | 22 tests: break subtraction, open sessions, overnight shifts, both DST transitions |
+| `web/src/lib/time.test.ts` | 29 tests: break subtraction, open sessions, overnight shifts, both DST transitions, and correction validation |
 | `web/src/lib/nudges.ts` | The status wording, with its tone rule written down |
 | `web/src/lib/storage.ts` | `localStorage` with every read and write guarded |
 | `web/src/components/` | ClockCard, Progress, History (with inline correction), Toolbar |
+| `web/public/icon.svg` | Source of every app icon; `npm run icons` regenerates the PNGs |
 
-Two decisions worth remembering:
+Three decisions worth remembering:
 
 - **Timestamps are ISO-8601 UTC strings, rendered in the browser's zone.** Same rule the
   backend will follow with `Instant`, so the migration is a transport change, not a rewrite.
 - **A session belongs to the day it started**, so a shift past midnight stays in one piece.
+- **Corrections are validated, breaks especially.** `breakMinutes` sums every break, so
+  two overlapping ones would subtract the overlap twice. Since breaks became editable by
+  hand, `validateSession` rejects overlaps, breaks outside their session, and inverted
+  times, and Save stays disabled until the problems are gone.
 
-### The storage caveat
+### The storage caveat — this is a real limitation, not a note
 
-`localStorage` is one browser on one device. Clearing site data erases everything. Use
-**Export JSON** in the Targets and backup panel now and then — that file is also the
-import path into the real backend when it arrives.
+`localStorage` lives in **one browser on one device**. There is no server, so there is
+nothing for a second device to read: your phone and your laptop keep entirely separate
+sets of data and always will, until a backend exists. Clearing site data erases what is
+there.
+
+Installing the PWA does not change this. A service worker caches the *app*, not your
+hours, and each installed copy still has its own storage.
+
+Until then: **Export JSON** from the Targets and backup panel, and import it on the other
+device. That same file is the import path into the real backend when it arrives.
 
 ## Deploying to Static Web Apps
 
