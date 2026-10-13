@@ -180,8 +180,12 @@ export default function App() {
         <Toolbar state={state} onSettings={setSettings} onImport={setState} />
       </div>
 
-      <footer className="mt-8 text-center text-xs text-stone-400 dark:text-stone-600">
-        Stored in this browser. Week starts Monday.
+      <footer className="mt-8 space-y-1 text-center text-xs text-stone-400 dark:text-stone-600">
+        <p>Stored in this browser. Week starts Monday.</p>
+        <p className="font-mono" title={`Built ${__BUILD_TIME__}`}>
+          {__BUILD_SHA__} ·{' '}
+          {new Date(__BUILD_TIME__).toLocaleDateString([], { day: 'numeric', month: 'short' })}
+        </p>
       </footer>
     </div>
   )

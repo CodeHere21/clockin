@@ -54,6 +54,11 @@ export/import, because of the storage caveat below.
 It is an installable PWA: add it to your home screen and it runs full-screen and fully
 offline, which costs nothing because there is no server to be offline from.
 
+The footer shows the commit and build date of the bundle you are looking at. That exists
+because an installed PWA caches its own code, so "am I on the new build?" is otherwise
+unanswerable without uninstalling — and the answer decides whether a bug report is a real
+bug or a stale cache. CI stamps it via `VITE_BUILD_SHA`; local builds ask git.
+
 ### How it is laid out
 
 | | |
