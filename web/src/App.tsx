@@ -26,13 +26,38 @@ export default function App() {
   useEffect(() => save(state), [state])
 
   const current = state.sessions.find(isOpen)
-  const runningId = current?.id ?? null
-
+  // Nothing in this UI shows seconds — the smallest unit anywhere is a minute. So
+  // tick once a minute, aligned to the boundary so the display flips when it should,
+  // and stop completely while the tab or installed app is hidden. The previous
+  // one-second interval re-rendered the whole tree 60x more often than the output
+  // could change, and kept doing it in the background. On a phone that is just heat.
   useEffect(() => {
-    // A running clock needs second-by-second updates; an idle one does not.
-    const id = setInterval(() => setNow(new Date()), runningId ? 1000 : 30_000)
-    return () => clearInterval(id)
-  }, [runningId])
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const stop = () => {
+      if (timer !== undefined) clearTimeout(timer)
+      timer = undefined
+    }
+
+    const tick = () => {
+      const at = new Date()
+      setNow(at)
+      timer = setTimeout(tick, 60_000 - (at.getSeconds() * 1000 + at.getMilliseconds()))
+    }
+
+    const sync = () => {
+      stop()
+      // Resync on return rather than leaving a stale minute on screen.
+      if (document.visibilityState === 'visible') tick()
+    }
+
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', sync)
+    }
+  }, [])
 
   const patch = (fn: (sessions: Session[]) => Session[]) =>
     setState((s) => ({ ...s, sessions: fn(s.sessions) }))
